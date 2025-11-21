@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - UPLOAD_DIR=/tmp/uploads
+      - MAX_FILE_SIZE=524288000
+    volumes:
+      - ./api:/app/api
+      - uploads:/tmp/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker-whisperx:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker.whisperx
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_NAME=worker-whisperx
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./worker:/app/worker
+      - uploads:/tmp/uploads
+      - whisperx_output:/tmp/whisperx_output
+      - timestamped_output:/tmp/timestamped_output
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  worker-timestamped:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker.timestamped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_NAME=worker-timestamped
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./worker:/app/worker
+      - uploads:/tmp/uploads
+      - whisperx_output:/tmp/whisperx_output
+      - timestamped_output:/tmp/timestamped_output
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  uploads:
+  whisperx_output:
+  timestamped_output:
+
