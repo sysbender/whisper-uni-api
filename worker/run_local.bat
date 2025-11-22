@@ -5,6 +5,7 @@ echo Starting worker...
 echo Make sure Redis is running on localhost:6379
 echo.
 
+set PYTHONPATH=%CD%\src;%PYTHONPATH%
 python -m worker.main
 
 pause

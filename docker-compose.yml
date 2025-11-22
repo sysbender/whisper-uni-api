@@ -25,7 +25,8 @@ services:
       - UPLOAD_DIR=/tmp/uploads
       - MAX_FILE_SIZE=524288000
     volumes:
-      - ./api:/app
+      - ./api/src:/app/src
+      - ./api/tests:/app/tests
       - uploads:/tmp/uploads
     depends_on:
       redis:
@@ -42,7 +43,8 @@ services:
       - WORKER_NAME=worker-whisperx
       - LOG_LEVEL=INFO
     volumes:
-      - ./worker:/app
+      - ./worker/src:/app/src
+      - ./worker/tests:/app/tests
       - uploads:/tmp/uploads
       - whisperx_output:/tmp/whisperx_output
       - timestamped_output:/tmp/timestamped_output
@@ -68,7 +70,8 @@ services:
       - WORKER_NAME=worker-timestamped
       - LOG_LEVEL=INFO
     volumes:
-      - ./worker:/app
+      - ./worker/src:/app/src
+      - ./worker/tests:/app/tests
       - uploads:/tmp/uploads
       - whisperx_output:/tmp/whisperx_output
       - timestamped_output:/tmp/timestamped_output

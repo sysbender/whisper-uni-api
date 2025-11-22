@@ -15,7 +15,8 @@ COPY pyproject.toml ./
 RUN uv pip install --system -e .
 
 # Copy application code
-COPY . .
+COPY src/ ./src/
+COPY tests/ ./tests/
 
 # Create upload directory
 RUN mkdir -p /tmp/uploads
@@ -25,4 +26,5 @@ EXPOSE 8000
 
 # Run the application
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENV PYTHONPATH=/app/src
 

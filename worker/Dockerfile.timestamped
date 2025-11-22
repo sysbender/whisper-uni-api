@@ -10,11 +10,13 @@ COPY pyproject.toml ./
 RUN uv pip install --system -e .
 
 # Copy worker application code
-COPY . .
+COPY src/ ./src/
+COPY tests/ ./tests/
 
 # Create output directories
 RUN mkdir -p /tmp/whisperx_output /tmp/timestamped_output
 
 # Run the worker
 CMD ["python", "-m", "worker.main"]
+ENV PYTHONPATH=/app/src
 

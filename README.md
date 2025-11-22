@@ -11,16 +11,21 @@ whisper-uni-api/
 ├── api/                    # API service (FastAPI)
 │   ├── pyproject.toml      # API dependencies (uv)
 │   ├── Dockerfile          # API container
+│   ├── src/
+│   │   └── api/            # API source code
+│   ├── tests/              # API tests
 │   ├── run_local.sh        # Local development script (Linux/Mac)
-│   ├── run_local.bat       # Local development script (Windows)
-│   └── ...
-├── worker/                  # Worker service (RQ)
-│   ├── pyproject.toml     # Worker dependencies (uv)
+│   └── run_local.bat       # Local development script (Windows)
+├── worker/                 # Worker service (RQ)
+│   ├── pyproject.toml      # Worker dependencies (uv)
 │   ├── Dockerfile.whisperx # WhisperX worker container
 │   ├── Dockerfile.timestamped # whisper-timestamped worker container
+│   ├── src/
+│   │   └── worker/         # Worker source code
+│   ├── tests/              # Worker tests
 │   ├── run_local.sh        # Local development script (Linux/Mac)
-│   ├── run_local.bat       # Local development script (Windows)
-│   └── ...
+│   └── run_local.bat       # Local development script (Windows)
+├── docs/                   # Documentation
 ├── docker-compose.yml      # Orchestration for all services
 └── README.md              # This file
 ```
@@ -64,6 +69,8 @@ The API will be available at `http://localhost:8000`
 
 ### Local Development
 
+Both projects use a `src/` layout where Python code is organized in `src/{project_name}/` directories. The convenience scripts automatically set up the `PYTHONPATH` for you.
+
 #### API Service
 
 ```bash
@@ -72,12 +79,14 @@ cd api
 # Install dependencies with uv
 uv sync
 
-# Run the API
-uvicorn api.main:app --reload
-
-# Or use the convenience script
+# Run the API (scripts handle PYTHONPATH automatically)
 ./run_local.sh  # Linux/Mac
 run_local.bat   # Windows
+
+# Or run manually (set PYTHONPATH first)
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"  # Linux/Mac
+# set PYTHONPATH=%CD%\src;%PYTHONPATH%        # Windows
+uvicorn api.main:app --reload
 ```
 
 #### Worker Service
@@ -88,12 +97,14 @@ cd worker
 # Install dependencies with uv
 uv sync
 
-# Run the worker
-python -m worker.main
-
-# Or use the convenience script
+# Run the worker (scripts handle PYTHONPATH automatically)
 ./run_local.sh  # Linux/Mac
 run_local.bat   # Windows
+
+# Or run manually (set PYTHONPATH first)
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"  # Linux/Mac
+# set PYTHONPATH=%CD%\src;%PYTHONPATH%        # Windows
+python -m worker.main
 ```
 
 **Note**: Make sure Redis is running before starting the worker:
@@ -125,6 +136,8 @@ uv sync
 
 ### Running Tests
 
+Tests are located in the `tests/` directory of each project. The `uv run` command automatically handles the Python path:
+
 ```bash
 # API tests
 cd api
@@ -133,6 +146,10 @@ uv run pytest
 # Worker tests
 cd worker
 uv run pytest
+
+# Or run with explicit PYTHONPATH
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
+pytest
 ```
 
 ## Docker Images
@@ -140,6 +157,17 @@ uv run pytest
 - **API**: Built from `python:3.11-slim` with uv
 - **Worker (WhisperX)**: Built from `ghcr.io/jim60105/whisperx:no_model`
 - **Worker (whisper-timestamped)**: Built from `linto-ai/whisper-timestamped:latest`
+
+## Project Layout
+
+Both `api/` and `worker/` projects follow a standard Python package structure:
+
+- **Source Code**: Located in `src/{project_name}/` directories
+- **Tests**: Located in `tests/` directories at the project root
+- **Configuration**: `pyproject.toml` for dependencies and build configuration
+- **Dockerfiles**: Container definitions for each service
+
+This structure keeps source code organized and separate from configuration files, following Python packaging best practices.
 
 ## Architecture
 

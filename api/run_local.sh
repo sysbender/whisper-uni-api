@@ -9,6 +9,7 @@ echo "Waiting for Redis to be ready..."
 sleep 2
 
 echo "Starting API service..."
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 uvicorn api.main:app --reload --host 0.0.0.0 --port 8000 &
 API_PID=$!
 
