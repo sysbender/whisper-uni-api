@@ -16,7 +16,7 @@ echo "API service started with PID: $API_PID"
 echo "API available at: http://localhost:8000"
 echo ""
 echo "To start the worker, run in another terminal:"
-echo "  python -m worker.main"
+echo "  cd worker && python -m worker.main"
 echo ""
 echo "Press Ctrl+C to stop the API service"
 

@@ -1,291 +1,153 @@
-# Universal Whisper Transcription API
+# Whisper Universal API
 
-REST API for audio transcription using multiple Whisper-based engines (WhisperX and whisper-timestamped).
-
-## Features
-
-- **Multiple Engines**: Support for WhisperX (with alignment, diarization) and whisper-timestamped
-- **Background Processing**: Asynchronous job processing with Redis Queue (RQ)
-- **GPU Support**: GPU acceleration for transcription workers
-- **Unified Output**: Normalized JSON format with word and segment-level timestamps
-- **RESTful API**: FastAPI-based REST endpoints
-
-## Architecture
-
-```
-┌─────────────┐              POST /transcribe              ┌──────────────┐
-│   FastAPI   │ ──────────────────────────────────────→ │  Redis Queue │
-│    (API)    │ ←───────────────────────────────────── │    (RQ)      │
-└─────────────┘              job_id                        └──────────────┘
-      ▲                                                            │
-      │                        GET /status/{job_id}               │
-      └────────────────────────────────────────────  dequeued  ───┘
-                                                           │
-                                                           ▼
-                                              ┌──────────────────────┐
-                                              │   RQ Worker (GPU)    │
-                                              │ - WhisperX runner    │
-                                              │ - timestamped runner │
-                                              └──────────────────────┘
-```
+A universal transcription API service supporting multiple Whisper variants (WhisperX and whisper-timestamped) with a clean, modular architecture.
 
 ## Project Structure
 
+This project is organized as two separate services:
+
 ```
 whisper-uni-api/
-├── api/                    # FastAPI service
-│   ├── main.py            # FastAPI app initialization
-│   ├── models.py          # Pydantic schemas
-│   ├── handlers.py        # Endpoint logic
-│   ├── storage.py         # File management
-│   ├── config.py          # Configuration
-│   └── tests/             # API tests
-├── worker/                 # RQ background worker
-│   ├── main.py            # Worker startup
-│   ├── tasks.py           # Job task definitions
-│   ├── config.py          # Configuration
-│   ├── runners/           # Engine runners
-│   │   ├── base.py        # Abstract runner interface
-│   │   ├── whisperx.py    # WhisperX implementation
-│   │   └── timestamped.py # whisper-timestamped implementation
-│   └── tests/             # Worker tests
-├── requirements.txt       # Python dependencies
-├── docker-compose.yml     # Docker Compose configuration
-├── Dockerfile.api         # API service Dockerfile
-├── Dockerfile.worker      # Worker service Dockerfile
-└── README.md             # This file
+├── api/                    # API service (FastAPI)
+│   ├── pyproject.toml      # API dependencies (uv)
+│   ├── Dockerfile          # API container
+│   ├── run_local.sh        # Local development script (Linux/Mac)
+│   ├── run_local.bat       # Local development script (Windows)
+│   └── ...
+├── worker/                  # Worker service (RQ)
+│   ├── pyproject.toml     # Worker dependencies (uv)
+│   ├── Dockerfile.whisperx # WhisperX worker container
+│   ├── Dockerfile.timestamped # whisper-timestamped worker container
+│   ├── run_local.sh        # Local development script (Linux/Mac)
+│   ├── run_local.bat       # Local development script (Windows)
+│   └── ...
+├── docker-compose.yml      # Orchestration for all services
+└── README.md              # This file
 ```
+
+## Services
+
+### API Service (`api/`)
+- FastAPI-based REST API
+- Handles file uploads and job queuing
+- Manages job status and results
+- **Dependencies**: FastAPI, Uvicorn, Redis, RQ, Pydantic
+
+### Worker Service (`worker/`)
+- RQ-based background worker
+- Supports multiple Whisper engines:
+  - **WhisperX**: Word-level timestamps and speaker diarization
+  - **whisper-timestamped**: Lightweight timestamped transcription
+- **Dependencies**: Redis, RQ
 
 ## Quick Start
 
 ### Prerequisites
-
 - Docker and Docker Compose
-- NVIDIA Docker runtime (for GPU support)
-- Python 3.11+ (for local development)
+- [uv](https://github.com/astral-sh/uv) package manager (recommended)
+- Python 3.11+
 
-### Using Docker Compose
+### Using Docker Compose (Recommended)
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd whisper-uni-api
-```
-
-2. Start services:
-```bash
+# Start all services
 docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
-3. Check service status:
-```bash
-docker-compose ps
-```
-
-4. View logs:
-```bash
-docker-compose logs -f api
-docker-compose logs -f worker
-```
+The API will be available at `http://localhost:8000`
 
 ### Local Development
 
-1. Install dependencies:
+#### API Service
+
 ```bash
-pip install -r requirements.txt
+cd api
+
+# Install dependencies with uv
+uv sync
+
+# Run the API
+uvicorn api.main:app --reload
+
+# Or use the convenience script
+./run_local.sh  # Linux/Mac
+run_local.bat   # Windows
 ```
 
-2. Start Redis (using Docker):
-```bash
-docker run -d -p 6379:6379 redis:7-alpine
-```
+#### Worker Service
 
-3. Start API service:
 ```bash
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
-```
+cd worker
 
-4. Start worker (in another terminal):
-```bash
+# Install dependencies with uv
+uv sync
+
+# Run the worker
 python -m worker.main
+
+# Or use the convenience script
+./run_local.sh  # Linux/Mac
+run_local.bat   # Windows
+```
+
+**Note**: Make sure Redis is running before starting the worker:
+```bash
+docker run -d -p 6379:6379 --name whisper-redis redis:7-alpine
 ```
 
 ## API Endpoints
 
-### POST /transcribe
+- `POST /transcribe` - Upload audio and enqueue transcription job
+- `GET /status/{job_id}` - Query job status and retrieve results
+- `GET /health` - Health check endpoint
 
-Upload audio file and enqueue transcription job.
+## Development
 
-**Request:**
-- `file`: Audio file (mp3, wav, m4a, flac)
-- `engine`: Transcription engine (`whisperx` or `timestamped`)
-- `language`: (Optional) Language code (e.g., `en`, `fr`)
-- `model`: (Optional) Model size (`base`, `small`, `medium`, `large`)
+### Installing Dependencies
 
-**Response:**
-```json
-{
-  "job_id": "uuid-string",
-  "status": "queued"
-}
-```
+Both services use `uv` for dependency management:
 
-**Example:**
 ```bash
-curl -X POST "http://localhost:8000/transcribe" \
-  -F "file=@audio.wav" \
-  -F "engine=whisperx" \
-  -F "language=en"
+# API service
+cd api
+uv sync
+
+# Worker service
+cd worker
+uv sync
 ```
 
-### GET /status/{job_id}
-
-Query job status and retrieve results.
-
-**Response:**
-```json
-{
-  "job_id": "uuid-string",
-  "status": "finished",
-  "result": {
-    "text": "Full transcription text",
-    "segments": [
-      {
-        "id": 0,
-        "start": 0.0,
-        "end": 2.5,
-        "text": "Segment text",
-        "words": [
-          {"word": "hello", "start": 0.0, "end": 0.5}
-        ]
-      }
-    ],
-    "language": "en",
-    "engine": "whisperx"
-  },
-  "error": null
-}
-```
-
-**Status values:**
-- `queued`: Job is waiting in queue
-- `started`: Job is being processed
-- `finished`: Job completed successfully
-- `failed`: Job failed with error
-
-### GET /health
-
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "redis": "connected"
-}
-```
-
-## Configuration
-
-Environment variables (see `.env.example`):
-
-- `REDIS_HOST`: Redis host (default: `redis`)
-- `REDIS_PORT`: Redis port (default: `6379`)
-- `UPLOAD_DIR`: Directory for uploaded files (default: `/tmp/uploads`)
-- `MAX_FILE_SIZE`: Maximum file size in bytes (default: `524288000` = 500MB)
-- `WORKER_NAME`: Worker name identifier (default: `worker-1`)
-- `LOG_LEVEL`: Logging level (default: `INFO`)
-
-## Testing
-
-Run tests:
+### Running Tests
 
 ```bash
 # API tests
-pytest api/tests/
+cd api
+uv run pytest
 
 # Worker tests
-pytest worker/tests/
-
-# All tests
-pytest
+cd worker
+uv run pytest
 ```
 
-## Engine Installation
+## Docker Images
 
-The Docker images include placeholders for WhisperX and whisper-timestamped. To use them, you need to:
+- **API**: Built from `python:3.11-slim` with uv
+- **Worker (WhisperX)**: Built from `ghcr.io/jim60105/whisperx:no_model`
+- **Worker (whisper-timestamped)**: Built from `linto-ai/whisper-timestamped:latest`
 
-1. **WhisperX**:
-```bash
-pip install whisperx
-```
+## Architecture
 
-2. **whisper-timestamped**:
-```bash
-pip install whisper-timestamped
-```
-
-Or uncomment the installation lines in `Dockerfile.worker`.
-
-## Output Format
-
-All engines return a unified JSON format:
-
-```json
-{
-  "text": "Full transcription text",
-  "segments": [
-    {
-      "id": 0,
-      "start": 0.0,
-      "end": 2.5,
-      "text": "Segment text",
-      "words": [
-        {
-          "word": "hello",
-          "start": 0.0,
-          "end": 0.5
-        }
-      ]
-    }
-  ],
-  "language": "en",
-  "engine": "whisperx"
-}
-```
-
-## Deployment
-
-### Production Considerations
-
-1. **Multiple Workers**: Scale workers for multiple GPUs:
-```yaml
-worker-1:
-  # ... configuration
-worker-2:
-  # ... configuration
-```
-
-2. **Gunicorn**: Use Gunicorn for production API:
-```bash
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker api.main:app --bind 0.0.0.0:8000
-```
-
-3. **Monitoring**: Consider adding rq-dashboard for job monitoring:
-```yaml
-rq-dashboard:
-  image: eoranged/rq-dashboard
-  ports:
-    - "9181:9181"
-  environment:
-    - RQ_DASHBOARD_REDIS_URL=redis://redis:6379
-```
+- **API Service**: Handles HTTP requests, file uploads, and job management
+- **Worker Service**: Processes transcription jobs asynchronously using Redis Queue
+- **Redis**: Message broker and job queue
+- **Shared Volumes**: For file uploads and transcription outputs
 
 ## License
 
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]
-
+[Your License Here]

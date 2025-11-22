@@ -15,8 +15,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: ./api
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -25,7 +25,7 @@ services:
       - UPLOAD_DIR=/tmp/uploads
       - MAX_FILE_SIZE=524288000
     volumes:
-      - ./api:/app/api
+      - ./api:/app
       - uploads:/tmp/uploads
     depends_on:
       redis:
@@ -34,15 +34,15 @@ services:
 
   worker-whisperx:
     build:
-      context: .
-      dockerfile: Dockerfile.worker.whisperx
+      context: ./worker
+      dockerfile: Dockerfile.whisperx
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - WORKER_NAME=worker-whisperx
       - LOG_LEVEL=INFO
     volumes:
-      - ./worker:/app/worker
+      - ./worker:/app
       - uploads:/tmp/uploads
       - whisperx_output:/tmp/whisperx_output
       - timestamped_output:/tmp/timestamped_output
@@ -60,15 +60,15 @@ services:
 
   worker-timestamped:
     build:
-      context: .
-      dockerfile: Dockerfile.worker.timestamped
+      context: ./worker
+      dockerfile: Dockerfile.timestamped
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - WORKER_NAME=worker-timestamped
       - LOG_LEVEL=INFO
     volumes:
-      - ./worker:/app/worker
+      - ./worker:/app
       - uploads:/tmp/uploads
       - whisperx_output:/tmp/whisperx_output
       - timestamped_output:/tmp/timestamped_output

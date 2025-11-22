@@ -1,0 +1,20 @@
+FROM ghcr.io/jim60105/whisperx:no_model
+
+WORKDIR /app
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Copy pyproject.toml and install dependencies
+COPY pyproject.toml ./
+RUN uv pip install --system -e .
+
+# Copy worker application code
+COPY . .
+
+# Create output directories
+RUN mkdir -p /tmp/whisperx_output /tmp/timestamped_output
+
+# Run the worker
+CMD ["python", "-m", "worker.main"]
+
