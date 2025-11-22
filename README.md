@@ -178,4 +178,4 @@ This structure keeps source code organized and separate from configuration files
 
 ## License
 
-[Your License Here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
