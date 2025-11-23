@@ -7,6 +7,14 @@ from tests.mock.runner import MockWhisperRunner
 
 
 @pytest.fixture
+def sample_audio(tmp_path):
+    """Create dummy audio file for testing."""
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"RIFF" + b"\x00" * 100)
+    return str(audio_file)
+
+
+@pytest.fixture
 def mock_runner():
     """Fixture providing a MockWhisperRunner instance."""
     return MockWhisperRunner(model="base", device="cpu")

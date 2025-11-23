@@ -8,7 +8,8 @@ echo Waiting for Redis to be ready...
 timeout /t 2 /nobreak >nul
 
 echo Starting API service...
-start "Whisper API" cmd /k "set PYTHONPATH=%CD%\src;%PYTHONPATH% && uvicorn api.main:app --reload --host 0.0.0.0 --port 8000"
+start "Whisper API" cmd /k "set PYTHONPATH=%CD%\src;%PYTHONPATH% && uv run --env-file .env uvicorn api.main:app --reload --host 0.0.0.0 --port 8000"
+
 
 echo.
 echo API service starting...

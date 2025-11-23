@@ -6,7 +6,8 @@ echo Make sure Redis is running on localhost:6379
 echo.
 
 set PYTHONPATH=%CD%\src;%PYTHONPATH%
-python -m worker.main
+REM python -m worker.main
+uv run --env-file .env -m worker.main
 
 pause
 

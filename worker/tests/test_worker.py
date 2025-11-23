@@ -7,13 +7,6 @@ import json
 import os
 
 @pytest.fixture
-def sample_audio(tmp_path):
-    """Create dummy audio file."""
-    audio_file = tmp_path / "test.wav"
-    audio_file.write_bytes(b"RIFF" + b"\x00" * 100)
-    return str(audio_file)
-
-@pytest.fixture
 def mock_output():
     """Mock transcription output."""
     return {
@@ -78,12 +71,17 @@ def test_transcribe_file_not_found(mock_get_runner):
     mock_runner = Mock()
     mock_get_runner.return_value = mock_runner
     
-    with pytest.raises(FileNotFoundError):
+    # transcribe wraps FileNotFoundError in Exception
+    with pytest.raises(Exception, match="Transcription failed.*Audio file not found"):
         transcribe("job-123", "/nonexistent/file.wav", "whisperx")
 
 @patch('subprocess.run')
 def test_whisperx_runner_success(mock_subprocess, tmp_path, mock_output):
     """Test WhisperX runner execution."""
+    
+    # Create audio file first
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"RIFF" + b"\x00" * 100)
     
     # Create output file
     output_dir = tmp_path / "whisperx_output"
@@ -101,13 +99,17 @@ def test_whisperx_runner_success(mock_subprocess, tmp_path, mock_output):
         mock_path.return_value.exists.return_value = True
         
         runner = WhisperXRunner()
-        result = runner.run(str(tmp_path / "test.wav"), language="en")
+        result = runner.run(str(audio_file), language="en")
     
     assert result["text"] == "hello world"
 
 @patch('subprocess.run')
 def test_whisperx_runner_failure(mock_subprocess, tmp_path):
     """Test WhisperX runner error handling."""
+    
+    # Create audio file first
+    audio_file = tmp_path / "test.wav"
+    audio_file.write_bytes(b"RIFF" + b"\x00" * 100)
     
     mock_subprocess.return_value = Mock(
         returncode=1,
@@ -117,7 +119,7 @@ def test_whisperx_runner_failure(mock_subprocess, tmp_path):
     runner = WhisperXRunner()
     
     with pytest.raises(RuntimeError, match="WhisperX error"):
-        runner.run(str(tmp_path / "test.wav"))
+        runner.run(str(audio_file))
 
 def test_timestamped_runner_normalize(mock_output):
     """Test timestamped runner output normalization."""

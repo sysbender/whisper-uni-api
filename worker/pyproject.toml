@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Universal Whisper Transcription Worker Service"
 requires-python = ">=3.11"
 dependencies = [
+    "pytest>=9.0.1",
     "redis>=5.0.0",
     "rq>=1.14.0",
 ]
@@ -20,8 +21,8 @@ packages = ["src/worker"]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-group]
+dev = [
     "pytest>=7.4.3",
 ]
 

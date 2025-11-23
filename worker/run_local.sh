@@ -7,5 +7,6 @@ echo "Make sure Redis is running on localhost:6379"
 echo ""
 
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-python -m worker.main
+#python -m worker.main
+uv run --env-file .env -m worker.main
 
